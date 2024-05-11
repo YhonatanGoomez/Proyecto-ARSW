@@ -14,25 +14,38 @@ const io = socketIo(server, {
         methods: ["GET", "POST"]
     }
 });
-
+let recicladores = {}
+let usuarios = {}
 let ofertas = {};
 let ofertasSinTomar = {}
 let ofertasenCurso = {};
+let nombre = ""
+let id = 0
 io.on("connection", (socket) => {
 
-    console.log("New client connected", socket.id);
+    // console.log("New client connected", socket.id);
 
     socket.on("disconnect", () => {
-        console.log("Client disconnected", socket.id);
+        // console.log("Client disconnected", socket.id);
     });
+    socket.on("setName", nombreenviado => {
+        nombre = nombreenviado
+
+    })
+
 
     socket.on("new-offer", (offer) => {
-        console.log("New offer received:", offer);
-        ofertas[socket.id] = offer;
-        ofertasSinTomar[socket.id] = offer;
-        io.emit("update-offers", Object.values(ofertasSinTomar)); // Broadcast to all clients
-        io.emit("myupdate-offers", ofertasenCurso[socket.id]);
-        console.log(ofertasenCurso[socket.id])
+        
+        offer.data.unshift(id);
+        // console.log("New offer received:", offer);
+        ofertas[nombre] = offer;
+        ofertasSinTomar[nombre] = offer;
+        io.emit("update-offers", Object.values(ofertasSinTomar)); 
+        io.emit("myupdate-offers", ofertasenCurso);
+        io.emit("myupdate-offers_usser", ofertas);
+        // console.log( "ofertas:::", ofertas)
+        id +=1
+ 
     });
 
     
@@ -42,26 +55,32 @@ io.on("connection", (socket) => {
     socket.on("take-offer", (offerId) => {
         // Filtra para encontrar la oferta basada en offerId
         const filteredOffers = Object.entries(ofertasSinTomar).filter(([key, value]) => value.data[0] === offerId);
-        if (!(ofertasenCurso[socket.id])){
+        if (!(ofertasenCurso[nombre])){
             if (filteredOffers.length > 0) {
-                console.log(filteredOffers[0]); // Muestra la oferta tomada
-                ofertasenCurso[socket.id] = filteredOffers[0][1]; // Guarda la oferta en curso
+
+                filteredOffers[0][1].data[3] = "Asignado"; 
+                // Muestra la oferta tomada
+                ofertasenCurso[nombre] = filteredOffers[0][1]; // Guarda la oferta en curso
         
                 // Remueve la oferta de ofertasSinTomar
                 delete ofertasSinTomar[filteredOffers[0][0]];
                 io.emit("update-offers", Object.values(ofertasSinTomar));
-                io.emit("myupdate-offers", ofertasenCurso[socket.id]);
-                console.log(ofertasenCurso[socket.id],"Entra a Take")
+                io.emit("myupdate-offers", ofertasenCurso);
+                io.emit("myupdate-offers_usser", ofertas);
+                console.log(ofertas)
+                // console.log(ofertasenCurso[nombre],"Entra a Take")
             } else {
-                console.log("No se encontró la oferta");
+                // console.log("No se encontró la oferta");
             }
         }
 
     });
     socket.on('updateOffers', data =>{
         io.emit("update-offers", Object.values(ofertasSinTomar));
-        io.emit("myupdate-offers", ofertasenCurso[socket.id]);
-        console.log('update offers correct')
+        io.emit("myupdate-offers", ofertasenCurso);
+        io.emit("myupdate-offers_usser", ofertas);
+
+        // console.log('update offers correct: ',"myupdate-offers", ofertasenCurso)
     })
 
     // socket.on('offer-taken', (offerId) => {
